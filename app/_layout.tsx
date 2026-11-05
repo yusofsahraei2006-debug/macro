@@ -21,6 +21,7 @@ function Shell() {
         <Stack.Screen name="meals" />
         <Stack.Screen name="meal-edit" />
         <Stack.Screen name="quick-add" />
+        <Stack.Screen name="describe-meal" />
         <Stack.Screen name="weight" />
         <Stack.Screen name="measurements" />
         <Stack.Screen name="water-history" />

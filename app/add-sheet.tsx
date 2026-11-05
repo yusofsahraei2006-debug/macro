@@ -19,11 +19,11 @@ const ACTIONS: Action[] = [
   { key: 'search', label: 'Search food', icon: 'magnifyingglass' },
   { key: 'custom', label: 'Custom food', icon: 'square.and.pencil' },
   { key: 'meal', label: 'Saved meal', icon: 'fork.knife' },
-  { key: 'voice', label: 'Voice entry', icon: 'mic.fill', phase: 'Phase 4' },
+  { key: 'voice', label: 'Describe or speak a meal', icon: 'mic.fill' },
   { key: 'water', label: 'Add water', icon: 'drop.fill' },
 ];
 
-const ROUTES: Record<string, string> = { scan: '/scan', search: '/search', custom: '/custom-food', meal: '/meals' };
+const ROUTES: Record<string, string> = { scan: '/scan', search: '/search', custom: '/custom-food', meal: '/meals', voice: '/describe-meal' };
 
 const WATER_AMOUNTS = [150, 250, 500, 1000];
 

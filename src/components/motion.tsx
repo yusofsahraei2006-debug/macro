@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleProp, StyleSheet, TextStyle, View } from 'react-native';
 import Animated, { Easing, FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { T } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { type as TypeScale } from '@/theme/tokens';
@@ -52,23 +52,40 @@ export function AnimatedNumber({
   return <T variant={variant} accent={accent} secondary={secondary} style={style}>{format(shown)}</T>;
 }
 
-/** Slowly drifting glow behind a screen: subtle depth without costing much battery. */
+/** Slowly drifting, soft-edged glow behind a screen: depth without a visible shape. */
 export function AmbientGlow() {
   const { colors, isDark } = useTheme();
   const t = useSharedValue(0);
   useEffect(() => {
-    t.value = withRepeat(withTiming(1, { duration: 9000, easing: Easing.inOut(Easing.sin) }), -1, true);
+    t.value = withRepeat(withTiming(1, { duration: 10000, easing: Easing.inOut(Easing.sin) }), -1, true);
   }, [t]);
-  const a = useAnimatedStyle(() => ({ transform: [{ translateX: -40 + t.value * 80 }, { translateY: t.value * 24 }, { scale: 1 + t.value * 0.12 }] }));
-  const b = useAnimatedStyle(() => ({ transform: [{ translateX: 30 - t.value * 60 }, { translateY: 20 - t.value * 30 }] }));
-  const hi = isDark ? 0.16 : 0.12;
+  const a = useAnimatedStyle(() => ({ transform: [{ translateX: -30 + t.value * 60 }, { translateY: t.value * 20 }, { scale: 1 + t.value * 0.1 }] }));
+  const b = useAnimatedStyle(() => ({ transform: [{ translateX: 24 - t.value * 48 }, { translateY: 16 - t.value * 24 }] }));
+  const strong = isDark ? 0.14 : 0.1;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Animated.View style={[{ position: 'absolute', top: -140, right: -120, width: 380, height: 380, borderRadius: 190, overflow: 'hidden' }, a]}>
-        <LinearGradient colors={[colors.accent + Math.round(hi * 255).toString(16).padStart(2, '0'), 'transparent']} start={{ x: 0.3, y: 0.3 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }} />
+      <Animated.View style={[{ position: 'absolute', top: -220, right: -200, width: 520, height: 520 }, a]}>
+        <Svg width="100%" height="100%">
+          <Defs>
+            <RadialGradient id="glowA" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={colors.accent} stopOpacity={strong} />
+              <Stop offset="0.55" stopColor={colors.accent} stopOpacity={strong * 0.35} />
+              <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#glowA)" />
+        </Svg>
       </Animated.View>
-      <Animated.View style={[{ position: 'absolute', top: 260, left: -160, width: 320, height: 320, borderRadius: 160, overflow: 'hidden' }, b]}>
-        <LinearGradient colors={[colors.accent + '0D', 'transparent']} start={{ x: 0.2, y: 0.2 }} end={{ x: 1, y: 1 }} style={{ flex: 1 }} />
+      <Animated.View style={[{ position: 'absolute', top: 380, left: -260, width: 480, height: 480 }, b]}>
+        <Svg width="100%" height="100%">
+          <Defs>
+            <RadialGradient id="glowB" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={colors.accent} stopOpacity={strong * 0.5} />
+              <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#glowB)" />
+        </Svg>
       </Animated.View>
     </View>
   );

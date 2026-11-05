@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, TextProps, View, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, spacing, type } from '@/theme/tokens';
 import { haptic } from '@/utils/haptics';
@@ -38,6 +39,11 @@ export function Card({ children, style }: { children: React.ReactNode; style?: S
         style,
       ]}
     >
+      <LinearGradient
+        pointerEvents="none"
+        colors={isDark ? ['rgba(255,255,255,0.055)', 'rgba(255,255,255,0)'] : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0)']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 90, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }}
+      />
       {children}
     </View>
   );

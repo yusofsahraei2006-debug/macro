@@ -43,11 +43,11 @@ function PlusButton({ onPress }: { onPress: () => void }) {
   React.useEffect(() => {
     pulse.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.out(Easing.quad) }), -1, false);
   }, [pulse]);
-  const halo = useAnimatedStyle(() => ({ opacity: 0.5 * (1 - pulse.value), transform: [{ scale: 1 + pulse.value * 0.55 }] }));
+  const halo = useAnimatedStyle(() => ({ opacity: 0.45 * (1 - pulse.value), transform: [{ scale: 1 + pulse.value * 0.32 }] }));
   return (
     <View style={styles.slotWrap}>
-      <View style={{ marginTop: -22, alignItems: 'center', justifyContent: 'center' }}>
-        <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent }, halo]} />
+      <View style={{ alignItems: 'center', justifyContent: 'center', width: 64, height: 64 }}>
+        <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: 52, height: 52, borderRadius: 26, backgroundColor: colors.accent }, halo]} />
         <Press accessibilityLabel="Add food, water or more" onPress={onPress}
           style={[styles.addBtn, { backgroundColor: colors.accent, shadowColor: colors.accent, marginTop: 0 }]}>
           <Icon name="plus" size={26} color={colors.accentText} weight="bold" />
@@ -112,19 +112,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 32,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 6,
     overflow: 'hidden',
   },
   slotWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   slot: { alignItems: 'center', justifyContent: 'center', minHeight: 52, minWidth: 64 },
   addBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -22,
     shadowOpacity: 0.28,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },

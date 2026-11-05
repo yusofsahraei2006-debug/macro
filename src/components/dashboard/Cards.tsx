@@ -28,7 +28,7 @@ export function CalorieCard({ totals, goals, compact, exerciseKcal = 0 }: { tota
         <T variant="caption" secondary>Goal {fmt(goals.calories)} kcal</T>
       </View>
       <View style={{ marginVertical: spacing.lg }}>
-        <Ring progress={progress(totals.kcal, goals.calories + exerciseKcal)} size={size} stroke={compact ? 12 : 16} color={over ? colors.danger : colors.accent}>
+        <Ring progress={progress(totals.kcal, goals.calories + exerciseKcal)} size={size} stroke={compact ? 12 : 16} color={over ? colors.danger : colors.accent} gold={!over}>
           <AnimatedNumber variant={compact ? 'title' : 'metric'} value={Math.abs(remaining)} />
           <T variant="caption" secondary>{over ? 'kcal over' : 'kcal remaining'}</T>
         </Ring>
@@ -72,7 +72,7 @@ export function MacroCard({ totals, goals, compact }: { totals: Macros; goals: G
               <AnimatedNumber variant="body" value={r.v} duration={600} /> / {r.g} g
             </T>
           </View>
-          <Bar progress={progress(r.v, r.g)} color={r.color} />
+          <Bar progress={progress(r.v, r.g)} color={r.color} gold height={9} />
           {!compact && (
             <T variant="caption" secondary>
               {Math.max(0, round0(r.g - r.v))} g remaining
@@ -128,7 +128,7 @@ export function ActivityCard({ goals, onPress }: { goals: Goals; onPress?: () =>
         </View>
         {connected ? (
           <>
-            <Bar progress={progress(t!.steps ?? 0, goals.steps)} color={colors.accent} height={10} />
+            <Bar progress={progress(t!.steps ?? 0, goals.steps)} color={colors.accent} height={10} gold />
             <View style={styles.rowBetween}>
               <T variant="body"><T variant="body" style={{ fontWeight: '700' }}>{fmt(t!.steps ?? 0)}</T> steps</T>
               <T variant="caption" secondary>

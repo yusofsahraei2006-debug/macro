@@ -146,7 +146,7 @@ export default function Activity() {
               <T variant="headline">Today</T>
               <T variant="caption" secondary>{h.source === 'healthkit' ? 'Apple Health' : 'Phone motion'}{h.lastSync ? ` · ${new Date(h.lastSync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</T>
             </View>
-            <Ring progress={progress(t?.steps ?? 0, d.goals.steps)} size={170} stroke={14} color={colors.accent}>
+            <Ring progress={progress(t?.steps ?? 0, d.goals.steps)} size={170} stroke={14} color={colors.accent} gold>
               <T variant="title">{fmt(t?.steps ?? 0)}</T>
               <T variant="caption" secondary>of {fmt(d.goals.steps)} steps</T>
             </Ring>
