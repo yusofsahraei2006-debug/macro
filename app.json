@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Macro",
+    "slug": "fuel",
+    "version": "0.3.0",
+    "orientation": "portrait",
+    "scheme": "fuel",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "io.fuelprivate.tracker.q7k2m9x4",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Macro uses the camera to scan food barcodes.",
+        "NSMotionUsageDescription": "Macro reads your step count from the phone's motion sensors to show daily activity. Nothing leaves your device.",
+        "NSHealthShareUsageDescription": "Macro reads your steps, distance, active energy, workouts and weight to show your activity. Health data never leaves your device.",
+        "NSSpeechRecognitionUsageDescription": "Macro uses speech recognition to log food by voice.",
+        "NSMicrophoneUsageDescription": "Macro uses the microphone for voice food logging."
+      },
+      "icon": "./assets/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Macro uses the camera to scan food barcodes.",
+          "recordAudioAndroid": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "icon": "./assets/icon.png"
+  }
+}
