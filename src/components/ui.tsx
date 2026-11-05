@@ -43,7 +43,9 @@ export function Card({ children, style }: { children: React.ReactNode; style?: S
   );
 }
 
-/** Pressable with a refined spring scale + haptic. */
+const APressable = Animated.createAnimatedComponent(Pressable);
+
+/** Pressable with a refined spring scale + haptic. The style (incl. flex/width) applies to the pressable itself. */
 export function Press({
   children,
   onPress,
@@ -62,18 +64,19 @@ export function Press({
   const s = useSharedValue(1);
   const a = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
   return (
-    <Pressable
+    <APressable
       {...rest}
       accessibilityRole={rest.accessibilityRole ?? 'button'}
-      onPressIn={() => (s.value = withSpring(0.96, { damping: 18, stiffness: 320 }))}
-      onPressOut={() => (s.value = withSpring(1, { damping: 14, stiffness: 260 }))}
+      onPressIn={() => (s.value = withSpring(0.94, { damping: 18, stiffness: 320 }))}
+      onPressOut={() => (s.value = withSpring(1, { damping: 12, stiffness: 240 }))}
       onPress={() => {
         if (haptics) haptic.tap();
         onPress?.();
       }}
+      style={[style, a]}
     >
-      <Animated.View style={[a, style]}>{children}</Animated.View>
-    </Pressable>
+      {children}
+    </APressable>
   );
 }
 

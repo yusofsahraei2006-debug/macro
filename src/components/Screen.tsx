@@ -3,6 +3,7 @@ import { ScrollView, StyleProp, ViewStyle, KeyboardAvoidingView, Platform } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
+import { AmbientGlow } from '@/components/motion';
 
 /** Safe-area aware scroll container; leaves room for the floating tab bar. */
 export function Screen({
@@ -18,6 +19,7 @@ export function Screen({
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <AmbientGlow />
       <ScrollView
         refreshControl={refreshControl}
         keyboardShouldPersistTaps="handled"

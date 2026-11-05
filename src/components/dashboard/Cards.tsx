@@ -9,6 +9,7 @@ import { spacing } from '@/theme/tokens';
 import { Goals } from '@/types';
 import { useHealth } from '@/hooks/useHealth';
 import { useUnits } from '@/hooks/useUnits';
+import { AnimatedNumber } from '@/components/motion';
 import { Macros, progress, remainingCalories, round0 } from '@/utils/nutrition';
 
 const fmt = (n: number) => Math.round(n).toLocaleString();
@@ -28,9 +29,7 @@ export function CalorieCard({ totals, goals, compact, exerciseKcal = 0 }: { tota
       </View>
       <View style={{ marginVertical: spacing.lg }}>
         <Ring progress={progress(totals.kcal, goals.calories + exerciseKcal)} size={size} stroke={compact ? 12 : 16} color={over ? colors.danger : colors.accent}>
-          <T variant={compact ? 'title' : 'metric'} accessibilityLabel={`${fmt(Math.abs(remaining))} calories ${over ? 'over' : 'remaining'}`}>
-            {fmt(Math.abs(remaining))}
-          </T>
+          <AnimatedNumber variant={compact ? 'title' : 'metric'} value={Math.abs(remaining)} />
           <T variant="caption" secondary>{over ? 'kcal over' : 'kcal remaining'}</T>
         </Ring>
       </View>
@@ -45,9 +44,11 @@ export function CalorieCard({ totals, goals, compact, exerciseKcal = 0 }: { tota
 }
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  const n = Number(value.replace(/[^0-9.-]/g, ''));
+  const prefix = value.startsWith('+') ? '+' : '';
   return (
     <View style={{ alignItems: 'center', flex: 1 }}>
-      <T variant="metricSmall" accent={accent}>{value}</T>
+      {Number.isFinite(n) ? <AnimatedNumber variant="metricSmall" accent={accent} value={n} format={(x) => prefix + Math.round(x).toLocaleString()} /> : <T variant="metricSmall" accent={accent}>{value}</T>}
       <T variant="caption" secondary>{label}</T>
     </View>
   );
@@ -68,7 +69,7 @@ export function MacroCard({ totals, goals, compact }: { totals: Macros; goals: G
           <View style={styles.rowBetween}>
             <T variant="body" style={{ fontWeight: '600' }}>{r.label}</T>
             <T variant="body" secondary>
-              <T variant="body">{round0(r.v)}</T> / {r.g} g
+              <AnimatedNumber variant="body" value={r.v} duration={600} /> / {r.g} g
             </T>
           </View>
           <Bar progress={progress(r.v, r.g)} color={r.color} />

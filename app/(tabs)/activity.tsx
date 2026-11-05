@@ -7,6 +7,7 @@ import { Icon } from '@/components/Icon';
 import { Ring } from '@/components/Ring';
 import { BarChart } from '@/components/charts';
 import { HEALTHKIT_BUILD } from '@/config';
+import { Reveal } from '@/components/motion';
 import { useDiary } from '@/hooks/useDiary';
 import { useHealth } from '@/hooks/useHealth';
 import { useUnits } from '@/hooks/useUnits';
@@ -140,7 +141,7 @@ export default function Activity() {
       {connected && (
         <>
           {/* Today */}
-          <Card style={{ alignItems: 'center', gap: spacing.md }}>
+          <Reveal i={1}><Card style={{ alignItems: 'center', gap: spacing.md }}>
             <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between' }}>
               <T variant="headline">Today</T>
               <T variant="caption" secondary>{h.source === 'healthkit' ? 'Apple Health' : 'Phone motion'}{h.lastSync ? ` · ${new Date(h.lastSync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</T>
@@ -154,10 +155,10 @@ export default function Activity() {
               <Mini label="Active kcal" value={t?.activeKcal != null ? fmt(t.activeKcal) : '—'} />
             </View>
             {h.source === 'motion' && <T variant="caption" secondary style={{ textAlign: 'center' }}>Phone motion does not provide active calories or workouts.</T>}
-          </Card>
+          </Card></Reveal>
 
           {/* Charts */}
-          <Card style={{ gap: spacing.md }}>
+          <Reveal i={2}><Card style={{ gap: spacing.md }}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {(['day', 'week', 'month'] as Range[]).map((r) => (
                 <Pill key={r} label={r === 'day' ? 'Day' : r === 'week' ? 'Week' : 'Month'} active={range === r} onPress={() => { haptic.select(); setRange(r); }} />
@@ -188,10 +189,10 @@ export default function Activity() {
                 {range !== 'day' && <Summary days={days} metric={metric} goal={d.goals.steps} fmtV={(v) => meta.fmt(conv(v))} unit={meta.unit} />}
               </>
             )}
-          </Card>
+          </Card></Reveal>
 
           {/* Exercise adjustment */}
-          <Card style={{ gap: spacing.md }}>
+          <Reveal i={3}><Card style={{ gap: spacing.md }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1, paddingRight: 12 }}>
                 <T variant="headline">Add exercise to calorie budget</T>
@@ -219,7 +220,7 @@ export default function Activity() {
                 {h.source === 'motion' && <T variant="caption" secondary>Phone motion has no active energy, so nothing is added with this source.</T>}
               </>
             )}
-          </Card>
+          </Card></Reveal>
 
           {/* Workouts */}
           {h.backend?.capabilities.workouts && (

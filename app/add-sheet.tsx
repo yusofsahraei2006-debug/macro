@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, ZoomIn, useAnimatedStyle, useSharedValue, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -82,37 +83,40 @@ export default function AddSheet() {
 
           {waterMode ? (
             <View style={styles.grid}>
-              {WATER_AMOUNTS.map((ml) => (
-                <Press key={ml} onPress={() => pickWater(ml)} style={[styles.tile, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <Icon name="drop.fill" size={22} color={colors.water} />
-                  <T variant="headline" style={{ marginTop: spacing.sm }}>
-                    {ml >= 1000 ? `${ml / 1000} L` : `${ml} ml`}
-                  </T>
-                </Press>
+              {WATER_AMOUNTS.map((ml, i) => (
+                <Animated.View key={ml} entering={ZoomIn.delay(i * 45).springify().damping(14)} style={styles.cell}>
+                  <Press onPress={() => pickWater(ml)} accessibilityLabel={`Add ${ml} millilitres`}
+                    style={[styles.tile, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Icon name="drop.fill" size={24} color={colors.water} />
+                    <T variant="headline" style={{ marginTop: spacing.sm }}>{ml >= 1000 ? `${ml / 1000} L` : `${ml} ml`}</T>
+                  </Press>
+                </Animated.View>
               ))}
             </View>
           ) : (
             <View style={styles.grid}>
-              {ACTIONS.map((a) => {
+              {ACTIONS.map((a, i) => {
                 const available = !a.phase;
                 return (
-                  <Press
-                    key={a.key}
-                    haptics={available}
-                    onPress={() => {
-                      if (a.key === 'water') setWaterMode(true);
-                      else if (ROUTES[a.key]) router.replace(ROUTES[a.key] as any); // replaces the sheet, so Back returns to the tabs
-                      else haptic.warning();
-                    }}
-                    accessibilityLabel={available ? a.label : `${a.label}, coming in ${a.phase}`}
-                    style={[styles.tile, { backgroundColor: colors.card, borderColor: colors.border, opacity: available ? 1 : 0.5 }]}
-                  >
-                    <View style={[styles.iconWrap, { backgroundColor: available ? colors.accent : colors.elevated }]}>
-                      <Icon name={a.icon as any} size={20} color={available ? colors.accentText : colors.textSecondary} />
-                    </View>
-                    <T variant="body" style={{ marginTop: spacing.sm, fontWeight: '600' }}>{a.label}</T>
-                    {a.phase ? <T variant="caption" secondary>{a.phase}</T> : null}
-                  </Press>
+                  <Animated.View key={a.key} entering={ZoomIn.delay(i * 55).springify().damping(13).stiffness(170)} style={styles.cell}>
+                    <Press
+                      haptics={available}
+                      onPress={() => {
+                        if (a.key === 'water') setWaterMode(true);
+                        else if (ROUTES[a.key]) router.replace(ROUTES[a.key] as any); // replaces the sheet, so Back returns to the tabs
+                        else haptic.warning();
+                      }}
+                      accessibilityLabel={available ? a.label : `${a.label}, coming in ${a.phase}`}
+                      style={[styles.tile, { backgroundColor: colors.card, borderColor: available ? colors.accent + '55' : colors.border, opacity: available ? 1 : 0.4 }]}
+                    >
+                      {available ? (
+                        <LinearGradient colors={[colors.accent + '33', 'transparent']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={StyleSheet.absoluteFill} />
+                      ) : null}
+                      <View style={[styles.iconWrap, { backgroundColor: available ? colors.accent : colors.elevated, shadowColor: colors.accent, shadowOpacity: available ? 0.5 : 0 }]}>
+                        <Icon name={a.icon as any} size={28} color={available ? colors.accentText : colors.textSecondary} />
+                      </View>
+                    </Press>
+                  </Animated.View>
                 );
               })}
             </View>
@@ -137,14 +141,17 @@ const styles = StyleSheet.create({
   },
   grabber: { alignSelf: 'center', width: 38, height: 5, borderRadius: 3, marginBottom: spacing.lg },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  cell: { width: '30.6%' },
   tile: {
-    width: '31.5%',
-    flexGrow: 1,
-    minHeight: 104,
+    aspectRatio: 1,
     borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: spacing.md,
+    borderWidth: 1,
+    alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  iconWrap: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  iconWrap: {
+    width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 }, shadowRadius: 12,
+  },
 });

@@ -3,6 +3,7 @@ import { Alert, TextInput, View } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { Card, Pill, Press, T } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
+import { Reveal } from '@/components/motion';
 import { getUnits, saveUnits } from '@/db/repositories';
 import { Units } from '@/types';
 import { kgToLb, lbToKg } from '@/services/health/aggregate';
@@ -78,7 +79,7 @@ export default function Profile() {
   return (
     <Screen>
       <T variant="largeTitle">Profile</T>
-      <Card style={{ gap: spacing.md }}>
+      <Reveal i={0}><Card style={{ gap: spacing.md }}>
         <T variant="headline">Daily goals</T>
         {FIELDS.map((f) => (
           <View key={f.key} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -102,9 +103,9 @@ export default function Profile() {
             </View>
           </View>
         ))}
-      </Card>
+      </Card></Reveal>
 
-      <Card style={{ gap: spacing.md }}>
+      <Reveal i={1}><Card style={{ gap: spacing.md }}>
         <T variant="headline">Body & units</T>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <T variant="body">Target weight ({uh.units.weight})</T>
@@ -133,15 +134,15 @@ export default function Profile() {
             <Pill label="mi" active={uh.units.distance === 'mi'} onPress={() => setUnit({ distance: 'mi' })} />
           </View>
         </View>
-      </Card>
+      </Card></Reveal>
 
-      <Card style={{ gap: spacing.sm }}>
+      <Reveal i={2}><Card style={{ gap: spacing.sm }}>
         <T variant="headline">Privacy</T>
         <T variant="body" secondary>No account, no ads, no analytics. Everything is stored on this device.</T>
         <Press onPress={wipe} style={{ paddingVertical: spacing.sm }}>
           <T variant="body" style={{ color: colors.danger, fontWeight: '600' }}>Delete all data</T>
         </Press>
-      </Card>
+      </Card></Reveal>
     </Screen>
   );
 }

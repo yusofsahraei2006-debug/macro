@@ -83,18 +83,29 @@ export function parseOffProduct(p: OffProduct): Food | null {
 }
 
 export async function lookupBarcode(codes: string[]): Promise<Food | null> {
-  for (const code of codes) {
-    const data = await getJson<{ status?: number; product?: OffProduct }>(
-      `${BASE}/api/v2/product/${encodeURIComponent(code)}.json?fields=${FIELDS}`,
-      { headers: HEADERS },
-    );
+  // Ask for every variant of the code at once (UPC-A / EAN-13 forms) instead of one after another.
+  const results = await Promise.allSettled(
+    codes.map((code) =>
+      getJson<{ status?: number; product?: OffProduct }>(
+        `${BASE}/api/v2/product/${encodeURIComponent(code)}.json?fields=${FIELDS}`,
+        { headers: HEADERS, timeoutMs: 7000 },
+      ).then((data) => ({ code, data })),
+    ),
+  );
+  let missingNutrition = false;
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    const { code, data } = r.value;
     if (data.status === 1 && data.product) {
       const food = parseOffProduct({ ...data.product, code: data.product.code ?? code });
       if (food) return food;
-      // product exists but has no nutrition data
-      throw Object.assign(new Error('Product found but nutrition values are missing'), { kind: 'missing-nutrition' });
+      missingNutrition = true;
     }
   }
+  if (missingNutrition) throw Object.assign(new Error('Product found but nutrition values are missing'), { kind: 'missing-nutrition' });
+  // Nothing found. If every request failed (offline/timeout), surface that rather than "not found".
+  const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  if (failed.length === results.length && failed.length > 0) throw failed[0].reason;
   return null;
 }
 

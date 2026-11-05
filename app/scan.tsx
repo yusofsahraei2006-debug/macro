@@ -1,5 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View, useWindowDimensions } from 'react-native';
+import Animated, { Easing, FadeIn, FadeInUp, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -113,7 +115,7 @@ export default function Scan() {
         facing="back"
         enableTorch={torch}
         active={state.kind === 'scanning'}
-        barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'qr'] }}
+        barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'] }}
         onBarcodeScanned={state.kind === 'scanning' ? onScan : undefined}
       />
 
@@ -126,22 +128,17 @@ export default function Scan() {
         </Press>
       </View>
 
-      <View style={styles.frameWrap} pointerEvents="none">
-        <View style={styles.frame}>
-          {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
-            <View key={c} style={[styles.corner, styles[c], { borderColor: colors.accent }]} />
-          ))}
-        </View>
-        <T variant="body" style={{ color: '#fff', marginTop: spacing.lg, fontWeight: '600' }}>Point at a food barcode</T>
-      </View>
+      <Viewfinder locked={state.kind !== 'scanning'} failed={state.kind === 'error'} />
 
       {state.kind !== 'scanning' && (
         <View style={[styles.sheet, { backgroundColor: colors.bgSecondary, borderColor: colors.border, paddingBottom: insets.bottom + spacing.lg }]}>
           {state.kind === 'loading' ? (
-            <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg }}>
-              <ActivityIndicator color={colors.accent} />
-              <T variant="headline">Looking up {state.code}</T>
-            </View>
+            <Animated.View entering={FadeInUp.springify().damping(16)} style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg }}>
+              <T variant="caption" secondary style={{ letterSpacing: 2 }}>BARCODE DETECTED</T>
+              <T variant="title" style={{ letterSpacing: 3, fontVariant: ['tabular-nums'] }}>{state.code}</T>
+              <SweepBar />
+              <T variant="body" secondary>Finding nutrition data…</T>
+            </Animated.View>
           ) : (
             <View style={{ gap: spacing.md }}>
               <T variant="title">{state.title}</T>
@@ -159,6 +156,79 @@ export default function Scan() {
   );
 }
 
+const DIM = 'rgba(0,0,0,0.62)';
+
+function Viewfinder({ locked, failed }: { locked: boolean; failed: boolean }) {
+  const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const fw = Math.min(width * 0.82, 360);
+  const fh = fw * 0.62;
+  const laser = useSharedValue(0);
+  const breath = useSharedValue(0);
+  const lock = useSharedValue(0);
+
+  React.useEffect(() => {
+    laser.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }), -1, true);
+    breath.value = withRepeat(withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [laser, breath]);
+  React.useEffect(() => {
+    lock.value = locked
+      ? withSequence(withTiming(1.12, { duration: 120 }), withSpring(1, { damping: 8, stiffness: 220 }))
+      : withTiming(0, { duration: 200 });
+  }, [locked, lock]);
+
+  const laserStyle = useAnimatedStyle(() => ({
+    opacity: locked ? 0 : 1,
+    transform: [{ translateY: -70 + laser.value * (fh + 68) }],
+  }));
+  const cornerStyle = useAnimatedStyle(() => ({
+    opacity: locked ? 1 : 0.65 + breath.value * 0.35,
+    transform: [{ scale: locked ? Math.max(1, lock.value) : 1 + breath.value * 0.025 }],
+  }));
+  const tint = failed ? colors.danger : locked ? '#32D74B' : colors.accent;
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={{ flex: 1, backgroundColor: DIM, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: spacing.lg }}>
+        <Animated.View entering={FadeIn.delay(250)}>
+          <T variant="headline" style={{ color: '#fff' }}>{failed ? 'Couldn’t read that' : locked ? 'Got it' : 'Point at a food barcode'}</T>
+          {!locked ? <T variant="caption" style={{ color: 'rgba(255,255,255,0.65)', textAlign: 'center', marginTop: 2 }}>It scans automatically</T> : null}
+        </Animated.View>
+      </View>
+      <View style={{ height: fh, flexDirection: 'row' }}>
+        <View style={{ flex: 1, backgroundColor: DIM }} />
+        <View style={{ width: fw, height: fh, overflow: 'hidden', borderRadius: 18 }}>
+          <Animated.View style={[{ position: 'absolute', left: 0, right: 0, top: 0, height: 70 }, laserStyle]}>
+            <LinearGradient colors={['transparent', tint + '55']} style={{ flex: 1 }} />
+            <LinearGradient colors={['transparent', tint, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 3 }} />
+          </Animated.View>
+          <Animated.View style={[StyleSheet.absoluteFill, cornerStyle]}>
+            {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
+              <View key={c} style={[styles.corner, styles[c], { borderColor: tint }]} />
+            ))}
+          </Animated.View>
+        </View>
+        <View style={{ flex: 1, backgroundColor: DIM }} />
+      </View>
+      <View style={{ flex: 1, backgroundColor: DIM }} />
+    </View>
+  );
+}
+
+function SweepBar() {
+  const { colors } = useTheme();
+  const x = useSharedValue(0);
+  React.useEffect(() => { x.value = withRepeat(withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) }), -1, false); }, [x]);
+  const a = useAnimatedStyle(() => ({ transform: [{ translateX: -120 + x.value * 300 }] }));
+  return (
+    <View style={{ width: 180, height: 6, borderRadius: 3, backgroundColor: colors.elevated, overflow: 'hidden' }}>
+      <Animated.View style={[{ width: 120, height: 6 }, a]}>
+        <LinearGradient colors={['transparent', colors.accent, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
+      </Animated.View>
+    </View>
+  );
+}
+
 function Action({ label, onPress, primary }: { label: string; onPress: () => void; primary?: boolean }) {
   const { colors } = useTheme();
   return (
@@ -171,7 +241,7 @@ function Action({ label, onPress, primary }: { label: string; onPress: () => voi
   );
 }
 
-const C = 28;
+const C = 30;
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   topBar: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.lg },
