@@ -25,7 +25,7 @@ function Shell() {
         <Stack.Screen name="measurements" />
         <Stack.Screen name="water-history" />
         <Stack.Screen
-          name="add"
+          name="add-sheet"
           options={{
             presentation: 'transparentModal',
             animation: 'fade',

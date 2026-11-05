@@ -27,7 +27,7 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
       <BlurView
         intensity={isDark ? 60 : 80}
         tint={isDark ? 'dark' : 'light'}
-        style={[styles.bar, { borderColor: colors.border, backgroundColor: isDark ? 'rgba(17,19,24,0.7)' : 'rgba(255,255,255,0.8)' }]}
+        style={[styles.bar, { borderColor: colors.border, backgroundColor: isDark ? 'rgba(17,19,24,0.92)' : 'rgba(255,255,255,0.8)' }]}
       >
         {state.routes.map((route, i) => {
           const meta = TABS[route.name];
@@ -36,12 +36,12 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
 
           if (route.name === 'add') {
             return (
-              <View key={route.key} style={styles.slot}>
+              <View key={route.key} style={styles.slotWrap}>
                 <Press
                   accessibilityLabel="Add food, water or more"
                   onPress={() => {
                     haptic.press();
-                    router.push('/add');
+                    router.push('/add-sheet');
                   }}
                   style={[styles.addBtn, { backgroundColor: colors.accent, shadowColor: colors.accent }]}
                 >
@@ -52,8 +52,8 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
           }
 
           return (
+            <View key={route.key} style={styles.slotWrap}>
             <Press
-              key={route.key}
               haptics={false}
               accessibilityLabel={meta.label}
               onPress={() => {
@@ -65,11 +65,12 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
               <Icon name={meta.icon as any} size={22} color={focused ? colors.accent : colors.textSecondary} />
               <T
                 variant="caption"
-                style={{ marginTop: 3, fontSize: 10, color: focused ? colors.accent : colors.textSecondary }}
+                style={{ marginTop: 3, fontSize: 11, fontWeight: '600', color: focused ? colors.accent : colors.textSecondary }}
               >
                 {meta.label}
               </T>
             </Press>
+            </View>
           );
         })}
       </BlurView>
@@ -100,7 +101,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     overflow: 'hidden',
   },
-  slot: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  slotWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  slot: { alignItems: 'center', justifyContent: 'center', minHeight: 52, minWidth: 64 },
   addBtn: {
     width: 56,
     height: 56,

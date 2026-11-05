@@ -22,7 +22,7 @@ export function CalorieCard({ totals, goals, compact, exerciseKcal = 0 }: { tota
 
   return (
     <Card style={{ alignItems: 'center' }}>
-      <View style={styles.rowBetween}>
+      <View style={[styles.rowBetween, { width: '100%' }]}>
         <T variant="headline">Calories</T>
         <T variant="caption" secondary>Goal {fmt(goals.calories)} kcal</T>
       </View>

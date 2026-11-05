@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
@@ -17,6 +17,7 @@ import * as foodRepo from '@/db/foodRepo';
 import * as repo from '@/db/repositories';
 
 const MAX_QTY = 10000;
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Log a food (or edit an already-logged entry): choose quantity + meal, see live macros, add to diary. */
 export default function LogFood() {
@@ -39,6 +40,24 @@ export default function LogFood() {
     return String(initialFood?.servingQty ?? 100);
   });
   const [busy, setBusy] = useState(false);
+  // Servings mode: the user says "5 servings" and we store grams. 1 serving = servSize (g or ml), remembered per food.
+  const [mode, setMode] = useState<'unit' | 'serv'>('unit');
+  const [servSize, setServSize] = useState(String(initialFood?.servingQty ?? 100));
+  const servKey = (id?: number) => `servingSize:${id}`;
+
+  useEffect(() => {
+    (async () => {
+      const f = initialFood;
+      if (!f || !isMassOrVolume(f.unit)) return;
+      const remembered = f.id ? parseDecimal((await repo.getRaw(servKey(f.id))) ?? '') : null;
+      const size = remembered ?? (f.servingQty !== 100 ? f.servingQty : null);
+      if (!size || size <= 0) return;
+      setServSize(String(size));
+      setMode('serv');
+      setQty(editing ? String(round2(editing.quantity / size)) : '1');
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!food) {
     return (
@@ -49,14 +68,28 @@ export default function LogFood() {
     );
   }
 
-  const q = parseDecimal(qty);
-  const valid = q !== null && q > 0 && q <= MAX_QTY;
-  const macros = scale(foodMacros(food), valid ? (q as number) : 0);
   const massLike = isMassOrVolume(food.unit);
-  const quick = massLike
-    ? [...(food.servingQty !== 100 ? [food.servingQty] : []), 50, 100, 150, 200]
-    : [0.5, 1, 2, 3];
-  const servings = valid && food.servingQty > 0 ? (q as number) / food.servingQty : 0;
+  const inServings = massLike && mode === 'serv';
+  const size = parseDecimal(servSize);
+  const sizeOk = size !== null && size > 0 && size <= MAX_QTY;
+  const q = parseDecimal(qty);
+  const qOk = q !== null && q > 0 && q <= (inServings ? 1000 : MAX_QTY);
+  const valid = qOk && (!inServings || sizeOk);
+  // Amount in the food's base unit (g / ml / piece...), which is what the diary stores.
+  const baseQty = valid ? (inServings ? (q as number) * (size as number) : (q as number)) : 0;
+  const macros = scale(foodMacros(food), baseQty);
+  const quick = inServings
+    ? [0.5, 1, 2, 3, 4, 5]
+    : massLike
+      ? [...(food.servingQty !== 100 ? [food.servingQty] : []), 50, 100, 150, 200]
+      : [0.5, 1, 2, 3, 4, 5];
+  const switchMode = (m: 'unit' | 'serv') => {
+    if (m === mode) return;
+    haptic.select();
+    if (m === 'serv' && !sizeOk) { /* keep qty; the size field is shown right below */ }
+    else if (valid) setQty(String(m === 'serv' ? round2(baseQty / (size as number)) : round2(baseQty)));
+    setMode(m);
+  };
 
   const toggleFav = async () => {
     haptic.select();
@@ -71,17 +104,19 @@ export default function LogFood() {
     setBusy(true);
     try {
       if (editing) {
-        await d.updateQuantity(editing.id, q as number);
+        await d.updateQuantity(editing.id, baseQty);
+        if (inServings && editing.foodId) await repo.setRaw(servKey(editing.foodId), String(size));
         if (meal !== editing.meal) { await repo.moveEntry(editing.id, meal); await d.refresh(); }
       } else {
         // Save online foods locally first: de-duplicates, enables offline use and favourites.
         const saved = food.id ? food : await foodRepo.upsertRemoteFood(food);
         await d.addEntry({
           date: d.date, meal, foodId: saved.id ?? null, name: saved.name, brand: saved.brand ?? null,
-          quantity: q as number, unit: saved.unit,
+          quantity: baseQty, unit: saved.unit,
           kcalPerUnit: saved.kcalPerUnit, proteinPerUnit: saved.proteinPerUnit,
           carbsPerUnit: saved.carbsPerUnit, fatPerUnit: saved.fatPerUnit,
         });
+        if (inServings && saved.id) await repo.setRaw(servKey(saved.id), String(size));
       }
       haptic.success();
       router.dismissAll?.();
@@ -126,31 +161,49 @@ export default function LogFood() {
 
       <Card style={{ gap: spacing.md }}>
         <T variant="headline">Amount</T>
+        {massLike ? (
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <Pill label="Servings" active={mode === 'serv'} onPress={() => switchMode('serv')} />
+            <Pill label={food.unit === 'ml' ? 'Millilitres' : 'Grams'} active={mode === 'unit'} onPress={() => switchMode('unit')} />
+          </View>
+        ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <TextInput
             value={qty}
             onChangeText={setQty}
             keyboardType="decimal-pad"
             selectTextOnFocus
-            accessibilityLabel={`Quantity in ${food.unit}`}
+            accessibilityLabel={inServings ? 'Number of servings' : `Quantity in ${food.unit}`}
             style={{
               flex: 1, color: colors.text, backgroundColor: colors.elevated, borderRadius: radius.md,
               paddingHorizontal: spacing.md, paddingVertical: 12, fontSize: 22, fontWeight: '700',
-              borderWidth: valid ? 0 : 1, borderColor: colors.danger,
+              borderWidth: qOk ? 0 : 1, borderColor: colors.danger,
             }}
           />
-          <T variant="headline" secondary>{food.unit}</T>
+          <T variant="headline" secondary>{inServings ? (q === 1 ? 'serving' : 'servings') : food.unit}</T>
         </View>
-        {!valid && qty.length > 0 ? <T variant="caption" style={{ color: colors.danger }}>Enter an amount above 0 and up to {MAX_QTY.toLocaleString()}.</T> : null}
+        {!qOk && qty.length > 0 ? <T variant="caption" style={{ color: colors.danger }}>Enter an amount above 0.</T> : null}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           {quick.map((v) => (
-            <Pill key={v} label={food.servingQty === v && massLike && v !== 100 ? `1 serving · ${v} ${food.unit}` : `${v} ${food.unit}`}
-              active={q === v} onPress={() => setQty(String(v))} />
+            <Pill key={v} label={inServings ? `${v}` : `${v} ${food.unit}`} active={q === v} onPress={() => setQty(String(v))} />
           ))}
         </View>
-        {massLike && food.servingQty > 0 ? (
+        {inServings ? (
+          <View style={{ gap: 6 }}>
+            <T variant="caption" secondary>1 serving = how many {food.unit}? (remembered for this food)</T>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <TextInput
+                value={servSize} onChangeText={setServSize} keyboardType="decimal-pad" selectTextOnFocus
+                accessibilityLabel={`Size of one serving in ${food.unit}`}
+                style={{ flex: 1, color: colors.text, backgroundColor: colors.elevated, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 10, fontSize: 17, fontWeight: '600', borderWidth: sizeOk ? 0 : 1, borderColor: colors.danger }}
+              />
+              <T variant="body" secondary>{food.unit}</T>
+            </View>
+            {valid ? <T variant="caption" secondary>= {round1(baseQty)} {food.unit} in total</T> : null}
+          </View>
+        ) : massLike && valid ? (
           <T variant="caption" secondary>
-            = {round1(servings)} serving{round1(servings) === 1 ? '' : 's'} (1 serving = {food.servingQty} {food.unit})
+            Tip: switch to Servings to log e.g. “5 eggs” instead of grams.
           </T>
         ) : null}
       </Card>
