@@ -1,0 +1,110 @@
+name: Build IPA for Sideloadly (free Apple ID)
+
+on:
+  workflow_dispatch:
+    inputs:
+      healthkit:
+        description: Include the HealthKit entitlement (a free Apple ID will most likely be unable to sign this)
+        type: boolean
+        default: false
+      strict_checks:
+        description: Fail the build if the type check or unit tests fail. Turn OFF only to still get an IPA while you fix errors (the check results are still printed).
+        type: boolean
+        default: true
+
+env:
+  EXPO_PUBLIC_HEALTHKIT_ENABLED: ${{ inputs.healthkit && '1' || '0' }}
+  BUNDLE_ID: io.fuelprivate.tracker.q7k2m9x4
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: |
+          npm install --no-audit --no-fund
+          echo "Resolved HealthKit package versions (both are pinned in package.json):"
+          npm ls @kingstinct/react-native-healthkit react-native-nitro-modules || true
+
+      - name: Save the generated lockfile as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json
+          retention-days: 14
+
+      - name: Check dependency versions match the Expo SDK
+        continue-on-error: true
+        run: npx expo install --check
+
+      - name: Type check
+        continue-on-error: ${{ !inputs.strict_checks }}
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        continue-on-error: ${{ !inputs.strict_checks }}
+        run: npx jest --ci
+
+      - name: Generate native iOS project
+        run: npx expo prebuild --platform ios --clean
+        env:
+          EXPO_PUBLIC_USDA_API_KEY: ${{ secrets.EXPO_PUBLIC_USDA_API_KEY }}
+
+      - name: Confirm HealthKit entitlement matches the chosen variant
+        run: |
+          ENT="$(find ios -maxdepth 2 -name '*.entitlements' | head -1)"
+          if [ "${{ inputs.healthkit }}" = "true" ]; then
+            grep -q 'com.apple.developer.healthkit' "$ENT" || { echo "HealthKit requested but entitlement missing in ${ENT:-<none>}"; exit 1; }
+          else
+            if [ -n "$ENT" ] && grep -q 'com.apple.developer.healthkit' "$ENT"; then echo "HealthKit entitlement present in a non-HealthKit build"; exit 1; fi
+          fi
+          echo "entitlement check ok (file: ${ENT:-none})"
+
+      - name: Archive (unsigned)
+        run: |
+          WS="$(ls -d ios/*.xcworkspace | head -1)"
+          SCHEME="$(basename "$WS" .xcworkspace)"
+          set -o pipefail
+          xcodebuild archive \
+            -workspace "$WS" -scheme "$SCHEME" -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Macro.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | tee "$RUNNER_TEMP/xcodebuild.log" | tail -n 40
+
+      - name: Package IPA
+        run: |
+          APP="$(find "$RUNNER_TEMP/Macro.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' | head -1)"
+          test -n "$APP"
+          mkdir -p out/Payload
+          cp -R "$APP" out/Payload/
+          (cd out && zip -qry Macro-unsigned.ipa Payload)
+          rm -rf out/Payload
+          shasum -a 256 out/Macro-unsigned.ipa | tee out/Macro-unsigned.ipa.sha256
+
+      - name: Verify IPA structure
+        run: bash scripts/verify-ipa.sh out/Macro-unsigned.ipa "$BUNDLE_ID" "${{ inputs.healthkit && '1' || '0' }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Macro-unsigned-ipa${{ inputs.healthkit && '-healthkit' || '' }}
+          path: |
+            out/Macro-unsigned.ipa
+            out/Macro-unsigned.ipa.sha256
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: ${{ runner.temp }}/xcodebuild.log
+          retention-days: 7
